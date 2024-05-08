@@ -79,7 +79,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         errors = []
         for ingredient in meal.get('ingredients', []):
             ingredient_name = ingredient['name']
-            quality = ingredient_qualities.get(ingredient_name, 'high')
+            quality = ingredient_qualities.get(ingredient_name)
             if quality is None:
                 errors.append(f"Ingredient name '{ingredient_name}' is incorrect or missing in the quality data")
             else:
