@@ -2,10 +2,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from urllib.parse import urlparse, parse_qs
 import cgi
-# Load data from the JSON file
-with open(r'C:\Users\User\Desktop\otsimo-internship-task-2024\DATASET.json', 'r') as f:
-    data = json.load(f)
 
+with open(r'C:\Users\User\Desktop\otsimo\DATASET.json', 'r') as f:
+        data = json.load(f)
 class RequestHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status_code=200, content_type='application/json'):
         self.send_response(status_code)
@@ -17,9 +16,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path.startswith('/listMeals'):
             meals = data.get('meals', [])
             sort_by = query_params.get('sort', [None])[0]
+            is_vegetarian = query_params.get('is_vegetarian', ['true'])[0] == 'false'
+            is_vegan = query_params.get('is_vegan', ['true'])[0] == 'false'
+            if is_vegetarian:
+                meals = [meal for meal in meals if all(any('vegetarian' in option['groups'] or 'vegan' in option['groups'] for option in ingredient['options']) for ingredient in meal['ingredients'])]            
+            elif is_vegan:
+                meals = [meal for meal in meals if all(any('vegan' in option['groups'] for option in ingredient['options']) for ingredient in meal['ingredients'])]            
             if sort_by == 'name':
                 meals.sort(key=lambda x: x['name'])
-
             self._set_headers()
             self.wfile.write(json.dumps(meals).encode())
         elif self.path.startswith('/getMeal'):
@@ -93,5 +97,5 @@ def run(server_class=HTTPServer, handler_class=RequestHandler, port=8080):
     print(f'Starting httpd on port {port}...')
     httpd.serve_forever()
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     run()
