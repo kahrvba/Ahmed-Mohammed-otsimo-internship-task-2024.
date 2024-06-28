@@ -434,19 +434,19 @@
             "name": "Homemade mashed potatoes",
             "quality": "high",
             "price": 10,
-            "per_amount": "litre"
+            "per_amount": "gram"
           },
           {
             "name": "Store-bought mashed potatoes",
             "quality": "medium",
             "price": 7,
-            "per_amount": "litre"
+            "per_amount": "gram"
           },
           {
             "name": "Instant mashed potatoes",
             "quality": "low",
             "price": 4,
-            "per_amount": "litre"
+            "per_amount": "gram"
           }
         ]
       },

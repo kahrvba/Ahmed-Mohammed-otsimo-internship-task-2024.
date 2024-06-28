@@ -5,7 +5,7 @@ import cgi # Module to handle CGI (Common Gateway Interface)
 import random # Module to generate random numbers
 
 # Load meal data from a JSON file on disk
-with open(r'C:\Users\User\Desktop\otsimo\DATASET.json', 'r') as f:
+with open(r'C:\Users\User\OneDrive\Desktop\otsimo\DATASET.json', 'r') as f:
         data = json.load(f)
         
 class RequestHandler(BaseHTTPRequestHandler):
@@ -44,10 +44,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                             ('vegetarian' in global_ingredient.get('groups', []) or 'vegan' in global_ingredient.get('groups', []))
                             for global_ingredient in global_ingredients
                             if global_ingredient['name'] == ingredient['name']
-            )
-            for ingredient in meal['ingredients']
-        )
-    ]
+                            )
+                        for ingredient in meal['ingredients']
+                        )
+                    ]
 
             if is_vegan:
               meals = [
@@ -57,10 +57,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                             'vegan' in global_ingredient.get('groups', [])
                             for global_ingredient in global_ingredients
                             if global_ingredient['name'] == ingredient['name']
-            )
-            for ingredient in meal['ingredients']
-        )
-    ]              
+                        )
+                        for ingredient in meal['ingredients']
+                    )
+                ]              
             #quary : http://localhost:8080/listMeals?sort=name
             # Sort meals by name if specified
             if sort_by == 'name':
@@ -69,42 +69,56 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(meals).encode())
          # Endpoint to get detailed information about a specific meal   
         elif self.path.startswith('/getMeal'):
-            meal_id = query_params.get('id', [None])[0] # getting required meal_id
-            if meal_id:
-                meal_id = int(meal_id)
-                meals = data.get('meals', [])
-                meal = next((meal for meal in meals if meal['id'] == meal_id), None)
+                meal_id = query_params.get('id', [None])[0] # getting required meal_id
+                if meal_id:
+                    meal_id = int(meal_id)
+                    meals = data.get('meals', [])
+                    meal = next((meal for meal in meals if meal['id'] == meal_id), None)
                 
-                if meal:
+                    if meal:
                     # Retrieve full ingredient details from the global ingredients list
-                    full_ingredients_info = [] # list to store all ingrediant infomations 
-                    ingredients = data.get('ingredients', [])
-                    for ingredient in meal['ingredients']:
-                        ingredient_detail = next((item for item in ingredients if item['name'] == ingredient['name']), None) # itreate over each meal ingrediant
-                        if ingredient_detail:
+                        full_ingredients_info = [] # list to store all ingrediant infomations 
+                        ingredients = data.get('ingredients', [])
+                        for ingredient in meal['ingredients']:
+                            ingredient_detail = next((item for item in ingredients if item['name'] == ingredient['name']), None) # itreate over each meal ingrediant
+                            if ingredient_detail:
                             #response with all ingrediant info
-                            full_ingredients_info.append({
-                            "name": ingredient_detail['name'],
-                            "groups": ingredient_detail.get('groups', []),
-                            "options": ingredient_detail.get('options', [])
-                    })
-                else:
-                        full_ingredients_info.append({"name": ingredient['name'], "error": "Details not found"}) #return error if no information found
+                                full_ingredients_info.append({
+                                "name": ingredient_detail['name'],
+                                "groups": ingredient_detail.get('groups', []),
+                                "options": ingredient_detail.get('options', [])
+                            })
+                        else:
+                            full_ingredients_info.append({"name": ingredient['name'], "error": "Details not found"}) #return error if no information found
             
-                meal_details = {
+                        meal_details = {
                         "id": meal['id'],
                         "name": meal['name'],
                         "ingredients": full_ingredients_info
-                    }
-                self._set_headers()
-                self.wfile.write(json.dumps(meal_details).encode())
-                return
-            self._set_headers(404)
-            self.wfile.write(json.dumps({"error": "Please choose a Meal to get details."}).encode())
+                        }
+                        self._set_headers()
+                        self.wfile.write(json.dumps(meal_details).encode())
+                        return
+                    else:
+                        self._set_headers(404)
+                        self.wfile.write(json.dumps({"error": "Please choose a Meal to get details."}).encode())
+                else:
+                    self._set_headers(404)
+                    self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode())
+        elif self.path.startswith('/search'):
+                search_query = query_params.get('query', [None])[0]
+                if search_query:
+                    search_query = search_query.lower()
+                    meals = data.get('meals', [])
+                    filtered_meals = [meal for meal in meals if search_query in meal['name'].lower()]
+                    self._set_headers()
+                    self.wfile.write(json.dumps(filtered_meals).encode())
+                else:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({"error": "Search query is required"}).encode())
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode())
-
     # parse_meal_id funtion to get the meal_id input from client
     def parse_meal_id(self, post_vars):
         meal_id = post_vars.get(b'meal_id', [None])[0]
@@ -118,8 +132,72 @@ class RequestHandler(BaseHTTPRequestHandler):
         else:
             self._set_headers(400)
             self.wfile.write(json.dumps({"error": "Meal ID is required"}).encode())
-            return None              
-    # Handle POST requests to modify or interact with meal data
+            print(f"this is the budget")
+            return None   
+    def parse_budget(self, post_vars):
+        budget_entry = post_vars.get(b'budget', [None])[0]
+        if budget_entry is None:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({"error": "Budget parameter is missing"}).encode())
+            print(f"parse_budge")
+            return None
+        try:
+            budget = float(post_vars.get(b'budget', [None])[0].decode())
+            return budget
+        except (TypeError, ValueError):
+            self._set_headers(400)
+            self.wfile.write(json.dumps({"error": "Invalid or missing budget"}).encode())
+            return None  
+    def calculate_lowest_price(self, meal):
+            price = 0
+            global_ingredients = data.get('ingredients', [])
+            for ingredient in meal['ingredients']:
+                ingredient_name = ingredient['name']
+                global_ingredient = next((item for item in global_ingredients if item['name'] == ingredient_name), None)
+                if global_ingredient and 'options' in global_ingredient:
+                    lowest_price = min(option['price'] for option in global_ingredient['options'])
+                    price += lowest_price
+            return price
+    def handle_random(self, post_vars):
+    # Parse budget if provided
+        try:
+            budget = float(post_vars.get(b'budget', [float('inf')])[0].decode())
+        except ValueError:
+            budget = float('inf')
+    # Calculate price for each meal and sort by closeness to the budgetmeal_price_diffs = []
+        meal_price_diffs = []
+        for meal in data.get('meals', []):
+            price = self.calculate_lowest_price(meal)
+            price_diff = abs(price - budget)
+            meal_price_diffs.append((meal, price, price_diff))
+        
+        meal_price_diffs.sort(key=lambda x: x[2])
+        
+        # Check if there are any meals
+        if not meal_price_diffs:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"error": "No meals available"}).encode())
+            return
+        
+        # Select the meal with the smallest difference to the budget
+        selected_meal, selected_meal_price, _ = meal_price_diffs[0]
+        
+        # Apply random quality to the selected meal
+        meal_price, quality_score = self.apply_random_quality(selected_meal, budget)
+        
+
+    # Prepare response
+        
+        response = {
+            "id": selected_meal['id'],
+            "name": selected_meal['name'],
+            "price": meal_price,
+            "quality_score": quality_score,
+            "ingredients":selected_meal['ingredients']
+            }
+        self._set_headers()
+        self.wfile.write(json.dumps(response).encode())
+        # Handle POST requests to modify or interact with meal data
     def do_POST(self): # Method to handle POST requests
         # POST Header
         content_type, _ = cgi.parse_header(self.headers.get('content-type'))
@@ -130,7 +208,25 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get('content-length'))
         post_vars = parse_qs(self.rfile.read(length), keep_blank_values=1)
-        if self.path == '/random':
+        if self.path == '/findHighest':
+            # To separate post_varse to handle budget and meal id independently
+            budget = self.parse_budget(post_vars)
+            if budget is None:
+                return
+            self.handle_find_highest(post_vars)
+        elif self.path == '/findHighestOfMeal':
+            meal_id = self.parse_meal_id(post_vars)
+            if meal_id is None:
+                return
+            budget = self.parse_budget(post_vars)
+            if budget is None:
+                    return
+            self.handle_find_highest_of_meal(meal_id, budget)
+        elif self.path == '/random':
+            # To separate post_varse to handle budget and meal id independently
+            budget = self.parse_budget(post_vars)
+            if budget is None:
+                return
             self.handle_random(post_vars)
         else:
             meal_id = self.parse_meal_id(post_vars)
@@ -246,16 +342,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         return total_score / num_ingredients if num_ingredients > 0 else 0 
     # handle_random return randomly selcected meal of a randomly quality parameters with option to set a budget
     
-    def calculate_lowest_price(self, meal):
-        price = 0
-        global_ingredients = data.get('ingredients', [])
-        for ingredient in meal['ingredients']:
-            ingredient_name = ingredient['name']
-            global_ingredient = next((item for item in global_ingredients if item['name'] == ingredient_name), None)
-            if global_ingredient and 'options' in global_ingredient:
-                lowest_price = min(option['price'] for option in global_ingredient['options'])
-                price += lowest_price
-        return price
+    
     def apply_random_quality(self, meal, budget):
         # Apply random quality levels to a meal while considering a budge
         meal_price = 0
@@ -265,6 +352,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             ingredient_name = ingredient['name']
             global_ingredient = next((item for item in global_ingredients if item['name'] == ingredient_name), None)
             if not global_ingredient or 'options' not in global_ingredient:
+                self._set_headers(404)
+                self.wfile.write(json.dumps({"error": "No meals available"}).encode())
                 continue
             
             quality = random.choice(list(self.QUALITY_SCORES.keys()))
@@ -276,45 +365,139 @@ class RequestHandler(BaseHTTPRequestHandler):
             average_quality_score = total_quality_score / len(meal['ingredients'])
         return meal_price, average_quality_score
     
-    def handle_random(self, post_vars):
-    # Parse budget if provided
-        try:
-            budget = float(post_vars.get(b'budget', [float('inf')])[0].decode())
-        except ValueError:
-            budget = float('inf')
-    # Calculate price for each meal and sort by closeness to the budgetmeal_price_diffs = []
-        meal_price_diffs = []
-        for meal in data.get('meals', []):
-            price = self.calculate_lowest_price(meal)
-            price_diff = abs(price - budget)
-            meal_price_diffs.append((meal, price, price_diff))
-        
-        meal_price_diffs.sort(key=lambda x: x[2])
-        
-        # Check if there are any meals
-        if not meal_price_diffs:
-            self._set_headers(404)
-            self.wfile.write(json.dumps({"error": "No meals available"}).encode())
-            return
-        
-        # Select the meal with the smallest difference to the budget
-        selected_meal, selected_meal_price, _ = meal_price_diffs[0]
-        
-        # Apply random quality to the selected meal
-        meal_price, quality_score = self.apply_random_quality(selected_meal, budget)
-        
+      
 
-    # Prepare response
-        
+    def apply_highest_quality_within_budget(self, meal, budget):
+        meal_price = 0
+        total_quality_score = 0
+        global_ingredients = data.get('ingredients', [])
+
+        for ingredient in meal['ingredients']:
+            ingredient_name = ingredient['name']
+            global_ingredient = next((item for item in global_ingredients if item['name'] == ingredient_name), None)
+            if not global_ingredient or 'options' not in global_ingredient:
+                self._set_headers(404)
+                self.wfile.write(json.dumps({"error": f"Missing ingredient list or options for {ingredient_name}."}).encode())
+                return None, None  # Return None to indicate failure
+
+            sorted_options = sorted(global_ingredient['options'], key=lambda x: self.QUALITY_SCORES.get(x['quality'], 0), reverse=True)
+            for option in sorted_options:
+                if meal_price + option['price'] <= budget:
+                    meal_price += option['price']
+                    total_quality_score += self.QUALITY_SCORES[option['quality']]
+
+        average_quality_score = total_quality_score / len(meal['ingredients']) if meal['ingredients'] else 0
+        return meal_price, average_quality_score
+
+    def find_highest_quality_meal(meals, global_ingredients, quality_scores):
+        highest_quality_meal = None
+        highest_total_quality_score = 0
+
+        for meal in meals:
+            total_quality_score = 0
+            all_ingredients_found = True
+
+        for ingredient in meal['ingredients']:
+            ingredient_name = ingredient['name']
+            global_ingredient = next((item for item in global_ingredients if item['name'] == ingredient_name), None)
+
+            if not global_ingredient or 'options' not in global_ingredient:
+                all_ingredients_found = False
+                break
+
+            highest_quality_option = max(global_ingredient['options'], key=lambda x: quality_scores.get(x['quality'], 0))
+            total_quality_score += quality_scores.get(highest_quality_option['quality'], 0)
+
+        if all_ingredients_found and (highest_quality_meal is None or total_quality_score > highest_total_quality_score):
+            highest_quality_meal = meal
+            highest_total_quality_score = total_quality_score
+
+        return highest_quality_meal, highest_total_quality_score
+
+    def handle_find_highest(self, post_vars):
+        query_params = parse_qs(urlparse(self.path).query)
+        budget = self.parse_budget(post_vars)
+        if budget is None:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({"error":"Budget parameter is missing"}))
+            return
+
+        global_ingredients = data.get('ingredients', [])
+        meals = data.get('meals', [])
+        is_vegetarian = query_params.get('is_vegetarian', ['false'])[0] == 'true'
+        is_vegan = query_params.get('is_vegan', ['false'])[0] == 'true'
+
+        if is_vegetarian or is_vegan:
+            meals = [
+                meal for meal in meals
+                if all(
+                    any(
+                        (is_vegetarian and 'vegetarian' in global_ingredient.get('groups', [])) or
+                        (is_vegan and 'vegan' in global_ingredient.get('groups', []))
+                        for global_ingredient in global_ingredients
+                        if global_ingredient['name'] == ingredient['name']
+                    )
+                    for ingredient in meal['ingredients']
+                )
+    ]
+
+        best_meal = None
+        highest_quality_score = 0
+        best_meal_price = 0
+        for meal in meals:
+            meal_price, quality_score = self.apply_highest_quality_within_budget(meal, budget)
+            if meal_price is not None and meal_price <= budget and quality_score > highest_quality_score:
+                highest_quality_score = quality_score
+                best_meal = meal
+                best_meal_price = meal_price
+
+        if best_meal:
+            response = {
+            "id": best_meal['id'],
+            "name": best_meal['name'],
+            "price": best_meal_price,
+            "quality_score": highest_quality_score,
+            "ingredients": [
+                {
+                "name": ingredient['name'],
+                "quality": random.choice(list(self.QUALITY_SCORES.keys()))  # Randomly assign a quality score
+                }for ingredient in best_meal['ingredients']
+            ]
+        }
+            self._set_headers()
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"error": "No suitable meal found within the budget"}).encode())
+
+    def handle_find_highest_of_meal(self, meal_id, budget):
+        meals = data.get('meals', [])
+        meal = next((meal for meal in meals if meal['id'] == meal_id), None)
+        if not meal:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"error": "Meal not found"}).encode())
+            return
+
+        meal_price, quality_score = self.apply_highest_quality_within_budget(meal, budget)
+        if meal_price is None:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"error": "Cannot fit meal within budget"}).encode())
+            return
+
         response = {
-            "id": selected_meal['id'],
-            "name": selected_meal['name'],
+            "id": meal['id'],
+            "name": meal['name'],
             "price": meal_price,
             "quality_score": quality_score,
-            "ingredients":selected_meal['ingredients']
-            }
+            "ingredients": [
+                {
+                    "name": ingredient['name'],
+                    "quality": list(self.QUALITY_SCORES.keys())[-3]  # Assuming the highest quality is the last key
+                }for ingredient in meal['ingredients']
+            ]
+        }
         self._set_headers()
-        self.wfile.write(json.dumps(response).encode())  
+        self.wfile.write(json.dumps(response).encode())
 # Configure and start the HTTP server
 def run(server_class=HTTPServer, handler_class=RequestHandler, port=8080):
     server_address = ('', port)
