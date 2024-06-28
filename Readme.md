@@ -2,6 +2,32 @@
  implement a REST API for a interacting with a menu of a restaurant. The menu is given to you as a JSON file which you will parse and perform operations on. The required features will be 
  listed below.
 
+ # Overview
+This Python script implements an HTTP server using the http.server module. The server provides endpoints to manage and query meal data from a JSON file. The server can:
+
+List meals with optional sorting and filtering.
+Retrieve detailed information about a specific meal.
+Search meals by name.
+Calculate the price and quality score of a meal based on ingredient qualities.
+Find the highest quality meal within a specified budget.
+Select a random meal based on a given budget.
+
+# Prerequisites
+Ensure you have the following:
+Python 3.x installed on your system.
+A JSON file (DATASET.json) containing meal and ingredient data.
+Setup Instructions
+Install Python 3.x: If you haven't installed Python, download and install it from Python's official website.
+
+Prepare the JSON file: Ensure DATASET.json is properly formatted and contains the required data. Place this file at C:\Users\User\OneDrive\Desktop\otsimo\DATASET.json.
+
+# Run the Server:
+
+Save the provided code into a Python file, e.g., server.py.
+Open a command prompt or terminal.
+Navigate to the directory containing server.py.
+Execute the command: python server.py.
+The server will start and listen on port 8080.
  # Description
 
 **restaurant declares that differing quality of ingredients are used in their meals.**
@@ -13,6 +39,7 @@ it also allows the customers to choose the ingredients of each meal in different
 ``medium``: moderate
 
 ``high``: the most expensive
+
 
 # Main Features and Requirements
 Therefore, they require a system where customers can:
@@ -117,7 +144,17 @@ takes a ``budget`` as input and yields the highest -quality meal that be ``prepa
     PARAMS:
     budget: (double, required)
     is_vegetarian: (boolean, optional) default=false
-    is_vegan: (boolean, optional) default=fals
+    is_vegan: (boolean, optional) default=false
+
+# 8/ Finding the Highest Quality Version of a Meal For Given Budget:
+
+This endpoint takes a ``budget`` and ``meal id`` as input and yields the highest-quality version of it that can be prepared for that budget and how much it costs.
+
+    PATH: /findHighestOfMeal
+    METHOD: POST
+    PARAMS:
+    meal_id: (integer, required)
+    budget: (double, required)
 
 # Dataset: 
 
